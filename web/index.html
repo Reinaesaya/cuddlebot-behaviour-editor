@@ -866,6 +866,39 @@
     }
 
 
+	function sendSmoothCommand(address, duration, setpoint, time) {
+        $.ajax
+        ({
+            type: "POST",
+            //the url where you want to sent the userName and password to
+            url: location.href + 'smooth',
+            dataType: 'json',
+            async: true,
+            //json object to sent to the authentication url
+            data: JSON.stringify({"addr" : address, "duration" : duration, "setpoint" : setpoint, "time" : time}),
+            success: function () {
+                console.log('successfully sent smooth command, data: ' + data);
+            }
+        })
+    };
+	
+	function sendSleepCommand(address) {
+        $.ajax
+        ({
+            type: "POST",
+            //the url where you want to sent the userName and password to
+            url: location.href + 'sleep',
+            dataType: 'json',
+            async: true,
+            //json object to sent to the authentication url
+            data: JSON.stringify({"addr" : address}),
+            success: function () {
+                console.log('successfully sent sleep command, data: ' + data);
+            }
+        })
+    };
+	
+	
 
     // Move an actuator to a certain setpoint for a duration of time
     function moveSetpt(actuator,setpoint,duration) {
@@ -886,7 +919,7 @@
     // Get from one setpoint to next moving at equally spaced intervals in between
     //      depending on the duration given
     function smoothToPt(actuator, currsetpt, nextsetpt, duration) {
-        var mininterval = 75;
+        var mininterval = 50;
         var loops = Math.floor(duration/mininterval)+1;
         var interval = Math.floor(duration/loops);
         var interval_offset = 5;
@@ -894,15 +927,24 @@
         var currpossettime = 500;
         var nextposresttime = 1000;
        
-        moveSetpt(actuator,currsetpt,currpossettime);
+	   
+		var setpoints1 = [];
+		setpoints1.push(currpossettime,currsetpt);
+        //moveSetpt(actuator,currsetpt,currpossettime);
 
         for (var i=1; i<loops; i++) {
+			var next = currsetpt+(i*setpointdiff);
+			setpoints1.push(interval,next);
+		/*sendSetPointCommand(actuator,0,1,[duration,setpoint]);
             (function(setpoint) {
                 setTimeout(function() { moveSetpt(actuator,setpoint,interval); }, currpossettime+(interval+interval_offset)*i);
-            })( currsetpt+(i*setpointdiff) );
+            })( currsetpt+(i*setpointdiff) );*/
         }
+		setpoints1.push(nextposresttime,nextsetpt);
+		
+		sendSetPointCommand(actuator,0,1,setpoints1);
 
-        setTimeout(function() { moveSetpt(actuator,nextsetpt,nextposresttime); }, currpossettime+(interval+interval_offset)*loops);
+        //setTimeout(function() { moveSetpt(actuator,nextsetpt,nextposresttime); }, currpossettime+(interval+interval_offset)*loops);
     }
 
 
@@ -952,35 +994,35 @@
         else if (direction === "Counterclockwise") dir = -1;
         else {console.log("Direction either Counterclockwise or Clockwise"); return;}
 
-        var mininterval = 90;
+        var mininterval = 50;
         var loops = Math.floor(duration/mininterval)+1;
         var interval = Math.floor(duration/loops);
-        var interval_offset = 7;
         var degdiff = dir * turndegs/loops;
         console.log(degdiff)
 
         var startpossettime = 500;
         var finalposresttime = 1000;
 
-        // Initialize Position
-        var startcoords = getHeadCoords(startdeg,radius);
-        moveSetpt("headx",startcoords[0],startpossettime);
-        moveSetpt("heady",startcoords[1],startpossettime);
-
+		var setpoints_x = [];
+		var setpoints_y = [];
+		var startcoords = getHeadCoords(startdeg,radius);		
+		setpoints_x.push(startpossettime,startcoords[0]);
+		setpoints_y.push(startpossettime,startcoords[1]);
         for (var i=1; i<loops; i++) {
             var coords = getHeadCoords(startdeg+(i*degdiff),radius);
-            (function(setpoint) { // X direction
-                setTimeout(function() { moveSetpt("headx",setpoint,interval); }, startpossettime+(interval+interval_offset)*i);
-            })( coords[0] );
-            (function(setpoint) { // Y direction
-                setTimeout(function() { moveSetpt("heady",setpoint,interval); }, startpossettime+(interval+interval_offset)*i);
-            })( coords[1] );
+			setpoints_x.push(interval,coords[0]);
+			setpoints_y.push(interval,coords[1]);
         }
-
-        var endcoords = getHeadCoords(startdeg+(dir*degdiff),radius);
-        setTimeout(function() { moveSetpt("headx",endcoords[0], finalposresttime); }, startpossettime+(interval+interval_offset)*loops);
-        setTimeout(function() { moveSetpt("heady",endcoords[1], finalposresttime); }, startpossettime+(interval+interval_offset)*loops);
-
+		var endcoords = getHeadCoords(startdeg+(dir*degdiff),radius);
+		setpoints_x.push(finalposresttime,endcoords[0]);
+		setpoints_y.push(finalposresttime,endcoords[1]);
+		
+		setTimeout(function() { sendSetPointCommand("heady",0,1,setpoints_y); }, 0);
+		setTimeout(function() { sendSetPointCommand("headx",0,1,setpoints_x); }, 100);
+		//sendSetPointCommand("heady",0,1,setpoints_y);
+		
+		console.log(setpoints_x);
+		console.log(setpoints_y);
     }
 
 

@@ -11,7 +11,7 @@ import (
 	"net"
 	"net/http"
 	"os"
-	"time"
+	//"time"
 )
 
 type SetPointParams struct {
@@ -23,6 +23,13 @@ type SetPointParams struct {
 
 type SleepParams struct {
 	Addr []string
+}
+
+type SmoothParams struct {
+	Addr		string
+	Duration	uint16
+	Setpoint	uint16
+	Time		uint16	
 }
 
 type BehaviourParams struct {
@@ -63,29 +70,25 @@ func setPointCommand(setPt SetPointParams) {
 	} else {
 
 		go sendSetPointCommand(jsonBytes)
-		time.Sleep(time.Millisecond * time.Duration(setPt.Setpoints[0]))
+		/*time.Sleep(time.Millisecond * time.Duration(setPt.Setpoints[0]))
 
 		sleepParams := SleepParams{
 			Addr: []string{setPt.Addr},
 		}
+		
+		fmt.Println(sleepParams)
 
 		jsonBytes, err = json.Marshal(sleepParams)
 		if err != nil {
 			fmt.Println("error:", err)
 		} else {
 			sendSleepCommand(jsonBytes)
-		}
+		}*/
 	}
 }
 
 func sendSetPointCommand(commandBytes []byte) {
 	url := "http://10.10.10.1/1/setpoint.json"
-
-	fmt.Println("commandBytes:", commandBytes)
-
-	var data map[string]interface{}
-	json.Unmarshal(commandBytes, &data)
-	fmt.Println("commandBytes:", data)
 
 	//  var jsonStr = []byte("{'addr':'purr', 'delay':0, 'loop':65535, 'setpoints':[1000, 28672]}")
 	//    req, err := http.NewRequest("PUT", url, bytes.NewBuffer(jsonStr))
@@ -116,6 +119,25 @@ func sendSleepCommand(commandBytes []byte) {
 	req.Header.Set("X-Custom-Header", "myvalue")
 	req.Header.Set("Content-Type", "application/json")
 
+	client := &http.Client{}
+	resp, err := client.Do(req)
+	if err != nil {
+		log.Println(err)
+	} else {
+		defer resp.Body.Close()
+
+		fmt.Println("response Status:", resp.Status)
+		fmt.Println("response Headers:", resp.Header)
+		body, _ := ioutil.ReadAll(resp.Body)
+		fmt.Println("response Body:", string(body))
+	}
+}
+
+func sendSmoothCommand(commandBytes []byte) {
+	url := "http://10.10.10.1/1/smooth.json"
+	req, err := http.NewRequest("PUT", url, bytes.NewBuffer(commandBytes))
+	req.Header.Set("X-Custom-Header", "myvalue")
+	req.Header.Set("Content-Type", "application/json")
 	client := &http.Client{}
 	resp, err := client.Do(req)
 	if err != nil {
@@ -161,6 +183,64 @@ func setpoint(rw http.ResponseWriter, req *http.Request) {
 		setPtParams.Loop = setPt.Loop
 		setPtParams.Setpoints = setPt.Setpoints
 		setPointCommand(setPtParams)
+	}
+}
+
+func smooth(rw http.ResponseWriter, req *http.Request) {
+	rw.Header().Set("Access-Control-Allow-Origin", "*")
+
+	// if origin := req.Header.Get("Origin"); origin != "" {
+	//  rw.Header().Set("Access-Control-Allow-Origin", origin)
+	// }
+
+	rw.Header().Set("Access-Control-Allow-Methods", "POST, GET, OPTIONS, PUT, DELETE")
+	rw.Header().Set("Access-Control-Allow-Headers", "Content-Type, Content-Length, Accept-Encoding, X-CSRF-Token")
+	rw.Header().Set("Access-Control-Allow-Credentials", "true")
+
+	decoder := json.NewDecoder(req.Body)
+	var smooths SmoothParams
+	err := decoder.Decode(&smooths)
+	if err != nil {
+		log.Println(err)
+	} else {
+		log.Println(smooths)
+
+		var smoothinstructs SmoothParams
+		smoothinstructs.Addr = smooths.Addr
+		smoothinstructs.Duration = smooths.Duration
+		smoothinstructs.Setpoint = smooths.Setpoint
+		smoothinstructs.Time = smooths.Time
+		jsonBytes, err := json.Marshal(smoothinstructs)
+		if err != nil {
+			fmt.Println("error:", err)
+		} else {
+			sendSmoothCommand(jsonBytes)
+		}
+	}
+}
+
+func sleep(rw http.ResponseWriter, req *http.Request) {
+	rw.Header().Set("Access-Control-Allow-Origin", "*")
+	rw.Header().Set("Access-Control-Allow-Methods", "POST, GET, OPTIONS, PUT, DELETE")
+	rw.Header().Set("Access-Control-Allow-Headers", "Content-Type, Content-Length, Accept-Encoding, X-CSRF-Token")
+	rw.Header().Set("Access-Control-Allow-Credentials", "true")
+
+	decoder := json.NewDecoder(req.Body)
+	var sleeps SleepParams
+	err := decoder.Decode(&sleeps)
+	if err != nil {
+		log.Println(err)
+	} else {
+		log.Println(sleeps)
+		
+		var sleepParams SleepParams
+		sleepParams.Addr = sleeps.Addr
+		jsonBytes, err := json.Marshal(sleepParams)
+		if err != nil {
+			fmt.Println("error:", err)
+		} else {
+			go sendSleepCommand(jsonBytes)
+		}
 	}
 }
 
@@ -346,6 +426,8 @@ func main() {
 
 	http.HandleFunc("/gesture", gesture)
 	http.HandleFunc("/setpoint", setpoint)
+	http.HandleFunc("/smooth", smooth)
+	http.HandleFunc("/sleep", sleep)
 	http.HandleFunc("/savebehaviour", saveBehaviourParams)
 	http.HandleFunc("/loadbehaviour", loadBehaviourParams)
 
