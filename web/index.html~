@@ -866,7 +866,7 @@
     }
 
 
-    function sendSmoothCommand(address, duration, setpoint, time) {
+	function sendSmoothCommand(address, duration, setpoint, time) {
         $.ajax
         ({
             type: "POST",
@@ -882,7 +882,7 @@
         })
     };
 	
-    function sendSleepCommand(address) {
+	function sendSleepCommand(address) {
         $.ajax
         ({
             type: "POST",
@@ -1019,6 +1019,7 @@
 		
 		setTimeout(function() { sendSetPointCommand("heady",0,1,setpoints_y); }, 0);
 		setTimeout(function() { sendSetPointCommand("headx",0,1,setpoints_x); }, 100);
+		//sendSetPointCommand("heady",0,1,setpoints_y);
 		
 		console.log(setpoints_x);
 		console.log(setpoints_y);
