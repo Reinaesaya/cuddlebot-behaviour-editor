@@ -11,7 +11,6 @@ import (
 	"net"
 	"net/http"
 	"os"
-	//"time"
 )
 
 type SetPointParams struct {
@@ -27,9 +26,8 @@ type SleepParams struct {
 
 type SmoothParams struct {
 	Addr		string
-	Duration	uint16
-	Setpoint	uint16
-	Time		uint16	
+	Time		uint16
+	Setpoint	[]uint16
 }
 
 type BehaviourParams struct {
@@ -50,48 +48,37 @@ var DEFAULT_PATH string
 
 var currGesture = "unknown"
 
-func sleepAll() {
-	sleepParams := SleepParams{
-		Addr: []string{"purr", "headx", "heady", "ribs", "spine"},
+func sendCommand(commandBytes []byte, commandstr string) {
+	var url string
+	switch (commandstr) {
+	case "setpoint":
+		url = "http://10.10.10.1/1/setpoint.json"
+	case "smooth":
+		url = "http://10.10.10.1/1/smooth.json"
+	case "sleep":
+		url = "http://10.10.10.1/1/sleep.json"
+	default:
+		log.Println("Not a valid command")
+		return
 	}
-
-	jsonBytes, err := json.Marshal(sleepParams)
+	req, err := http.NewRequest("PUT", url, bytes.NewBuffer(commandBytes))
+	req.Header.Set("X-Custom-Header", "myvalue")
+	req.Header.Set("Content-Type", "application/json")
+	client := &http.Client{}
+	resp, err := client.Do(req)
 	if err != nil {
-		fmt.Println("error:", err)
+		log.Println(err)
 	} else {
-		sendSleepCommand(jsonBytes)
-	}
-}
-
-func setPointCommand(setPt SetPointParams) {
-	jsonBytes, err := json.Marshal(setPt)
-	if err != nil {
-		fmt.Println("error:", err)
-	} else {
-
-		go sendSetPointCommand(jsonBytes)
-		/*time.Sleep(time.Millisecond * time.Duration(setPt.Setpoints[0]))
-
-		sleepParams := SleepParams{
-			Addr: []string{setPt.Addr},
-		}
-		
-		fmt.Println(sleepParams)
-
-		jsonBytes, err = json.Marshal(sleepParams)
-		if err != nil {
-			fmt.Println("error:", err)
-		} else {
-			sendSleepCommand(jsonBytes)
-		}*/
+		defer resp.Body.Close()
+		fmt.Println("response Status:", resp.Status)
+		fmt.Println("response Headers:", resp.Header)
+		body, _ := ioutil.ReadAll(resp.Body)
+		fmt.Println("response Body:", string(body))
 	}
 }
 
 func sendSetPointCommand(commandBytes []byte) {
 	url := "http://10.10.10.1/1/setpoint.json"
-
-	//  var jsonStr = []byte("{'addr':'purr', 'delay':0, 'loop':65535, 'setpoints':[1000, 28672]}")
-	//    req, err := http.NewRequest("PUT", url, bytes.NewBuffer(jsonStr))
 	req, err := http.NewRequest("PUT", url, bytes.NewBuffer(commandBytes))
 	req.Header.Set("X-Custom-Header", "myvalue")
 	req.Header.Set("Content-Type", "application/json")
@@ -112,9 +99,6 @@ func sendSetPointCommand(commandBytes []byte) {
 
 func sendSleepCommand(commandBytes []byte) {
 	url := "http://10.10.10.1/1/sleep.json"
-
-	//  var jsonStr = []byte("{'addr':'purr', 'delay':0, 'loop':65535, 'setpoints':[1000, 28672]}")
-	//    req, err := http.NewRequest("PUT", url, bytes.NewBuffer(jsonStr))
 	req, err := http.NewRequest("PUT", url, bytes.NewBuffer(commandBytes))
 	req.Header.Set("X-Custom-Header", "myvalue")
 	req.Header.Set("Content-Type", "application/json")
@@ -160,11 +144,6 @@ func mainView(w http.ResponseWriter, r *http.Request) {
 
 func setpoint(rw http.ResponseWriter, req *http.Request) {
 	rw.Header().Set("Access-Control-Allow-Origin", "*")
-
-	// if origin := req.Header.Get("Origin"); origin != "" {
-	//  rw.Header().Set("Access-Control-Allow-Origin", origin)
-	// }
-
 	rw.Header().Set("Access-Control-Allow-Methods", "POST, GET, OPTIONS, PUT, DELETE")
 	rw.Header().Set("Access-Control-Allow-Headers", "Content-Type, Content-Length, Accept-Encoding, X-CSRF-Token")
 	rw.Header().Set("Access-Control-Allow-Credentials", "true")
@@ -182,17 +161,17 @@ func setpoint(rw http.ResponseWriter, req *http.Request) {
 		setPtParams.Delay = setPt.Delay
 		setPtParams.Loop = setPt.Loop
 		setPtParams.Setpoints = setPt.Setpoints
-		setPointCommand(setPtParams)
+		jsonBytes, err := json.Marshal(setPtParams)
+		if err != nil {
+			fmt.Println("error:", err)
+		} else {
+			go sendCommand(jsonBytes, "setpoint")
+		}
 	}
 }
 
 func smooth(rw http.ResponseWriter, req *http.Request) {
 	rw.Header().Set("Access-Control-Allow-Origin", "*")
-
-	// if origin := req.Header.Get("Origin"); origin != "" {
-	//  rw.Header().Set("Access-Control-Allow-Origin", origin)
-	// }
-
 	rw.Header().Set("Access-Control-Allow-Methods", "POST, GET, OPTIONS, PUT, DELETE")
 	rw.Header().Set("Access-Control-Allow-Headers", "Content-Type, Content-Length, Accept-Encoding, X-CSRF-Token")
 	rw.Header().Set("Access-Control-Allow-Credentials", "true")
@@ -207,14 +186,13 @@ func smooth(rw http.ResponseWriter, req *http.Request) {
 
 		var smoothinstructs SmoothParams
 		smoothinstructs.Addr = smooths.Addr
-		smoothinstructs.Duration = smooths.Duration
-		smoothinstructs.Setpoint = smooths.Setpoint
 		smoothinstructs.Time = smooths.Time
+		smoothinstructs.Setpoint = smooths.Setpoint
 		jsonBytes, err := json.Marshal(smoothinstructs)
 		if err != nil {
 			fmt.Println("error:", err)
 		} else {
-			sendSmoothCommand(jsonBytes)
+			go sendCommand(jsonBytes, "smooth")
 		}
 	}
 }
@@ -232,14 +210,21 @@ func sleep(rw http.ResponseWriter, req *http.Request) {
 		log.Println(err)
 	} else {
 		log.Println(sleeps)
+		log.Println(sleeps.Addr)
 		
 		var sleepParams SleepParams
-		sleepParams.Addr = sleeps.Addr
+		// all := []string{"all"}
+		// if sleeps.Addr == all {
+		//	sleepParams := SleepParams{
+		//		Addr: []string{"purr", "headx", "heady", "ribs", "spine"}, }
+		// } else {
+			sleepParams.Addr = sleeps.Addr
+		//}
 		jsonBytes, err := json.Marshal(sleepParams)
 		if err != nil {
 			fmt.Println("error:", err)
 		} else {
-			go sendSleepCommand(jsonBytes)
+			go sendCommand(jsonBytes, "sleep")
 		}
 	}
 }
