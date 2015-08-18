@@ -56,6 +56,10 @@ sendSetPointCommand("purr", 0, 65535, [1231,35421]);
 // Stop purring
 sendSleepCommand(["purr"]); // Note the brackets
 
+// Change PID coefficents of yaw (x-direction) head actuator to
+// 	kp = 100, ki = 1, kd = 5
+sendSetPIDCommand("headx", 100, 1, 5)
+
 
 // Basic breathing (1 second out, 1 second relaxed)
 startBreathing(2000);

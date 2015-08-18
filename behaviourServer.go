@@ -104,7 +104,7 @@ func setpid(rw http.ResponseWriter, req *http.Request) {
 	if err != nil {
 		log.Println(err)
 	} else {
-		log.Println(setPt)
+		log.Println(setpid)
 
 		var setpidParams SetPIDParams
 		setpidParams.Addr = setpid.Addr
