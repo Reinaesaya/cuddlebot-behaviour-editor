@@ -9,15 +9,19 @@ This updated version includes various command line functions written in Javascri
 The following set of instructions applies for Windows 7, and may or may not be applicable to other operating systems
 
 Step 1: Install [go](https://golang.org/doc/install) and [git](https://git-scm.com/downloads)
+
 Step 2: Clone folder via git
 ```bash
 git clone https://github.com/reinaesaya/cuddlebot-behaviour-editor
 ```
+
 Step 3: Navigate to folder via bash or cmd, and run editor
 ```bash
 go run behaviourServer.go
 ```
+
 Step 4: Open up a browser to `localhost:8080`
+
 Step 5: Right click on a blank space on the page and click `Inspect element`. Switch to `console`
 
 ## Usage

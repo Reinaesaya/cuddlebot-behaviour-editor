@@ -13,6 +13,13 @@ import (
 	"os"
 )
 
+type SetPIDParams struct {
+	Addr string
+	Kp   float32
+	Ki   float32
+	Kd   float32
+}
+
 type SetPointParams struct {
 	Addr      string
 	Delay     uint16
@@ -51,6 +58,8 @@ var currGesture = "unknown"
 func sendCommand(commandBytes []byte, commandstr string) {
 	var url string
 	switch (commandstr) {
+	case "setpid":
+		url = "http://10.10.10.1/1/setpid.json"
 	case "setpoint":
 		url = "http://10.10.10.1/1/setpoint.json"
 	case "smooth":
@@ -77,69 +86,38 @@ func sendCommand(commandBytes []byte, commandstr string) {
 	}
 }
 
-func sendSetPointCommand(commandBytes []byte) {
-	url := "http://10.10.10.1/1/setpoint.json"
-	req, err := http.NewRequest("PUT", url, bytes.NewBuffer(commandBytes))
-	req.Header.Set("X-Custom-Header", "myvalue")
-	req.Header.Set("Content-Type", "application/json")
-
-	client := &http.Client{}
-	resp, err := client.Do(req)
-	if err != nil {
-		log.Println(err)
-	} else {
-		defer resp.Body.Close()
-
-		fmt.Println("response Status:", resp.Status)
-		fmt.Println("response Headers:", resp.Header)
-		body, _ := ioutil.ReadAll(resp.Body)
-		fmt.Println("response Body:", string(body))
-	}
-}
-
-func sendSleepCommand(commandBytes []byte) {
-	url := "http://10.10.10.1/1/sleep.json"
-	req, err := http.NewRequest("PUT", url, bytes.NewBuffer(commandBytes))
-	req.Header.Set("X-Custom-Header", "myvalue")
-	req.Header.Set("Content-Type", "application/json")
-
-	client := &http.Client{}
-	resp, err := client.Do(req)
-	if err != nil {
-		log.Println(err)
-	} else {
-		defer resp.Body.Close()
-
-		fmt.Println("response Status:", resp.Status)
-		fmt.Println("response Headers:", resp.Header)
-		body, _ := ioutil.ReadAll(resp.Body)
-		fmt.Println("response Body:", string(body))
-	}
-}
-
-func sendSmoothCommand(commandBytes []byte) {
-	url := "http://10.10.10.1/1/smooth.json"
-	req, err := http.NewRequest("PUT", url, bytes.NewBuffer(commandBytes))
-	req.Header.Set("X-Custom-Header", "myvalue")
-	req.Header.Set("Content-Type", "application/json")
-	client := &http.Client{}
-	resp, err := client.Do(req)
-	if err != nil {
-		log.Println(err)
-	} else {
-		defer resp.Body.Close()
-
-		fmt.Println("response Status:", resp.Status)
-		fmt.Println("response Headers:", resp.Header)
-		body, _ := ioutil.ReadAll(resp.Body)
-		fmt.Println("response Body:", string(body))
-	}
-}
-
 func mainView(w http.ResponseWriter, r *http.Request) {
 	t, _ := template.ParseFiles("index.html")
 	t.Execute(w, nil)
 	return
+}
+
+func setpid(rw http.ResponseWriter, req *http.Request) {
+	rw.Header().Set("Access-Control-Allow-Origin", "*")
+	rw.Header().Set("Access-Control-Allow-Methods", "POST, GET, OPTIONS, PUT, DELETE")
+	rw.Header().Set("Access-Control-Allow-Headers", "Content-Type, Content-Length, Accept-Encoding, X-CSRF-Token")
+	rw.Header().Set("Access-Control-Allow-Credentials", "true")
+
+	decoder := json.NewDecoder(req.Body)
+	var setpid SetPIDParams
+	err := decoder.Decode(&setpid)
+	if err != nil {
+		log.Println(err)
+	} else {
+		log.Println(setPt)
+
+		var setpidParams SetPIDParams
+		setpidParams.Addr = setpid.Addr
+		setpidParams.Kp = setpid.Kp
+		setpidParams.Ki = setpid.Ki
+		setpidParams.Kd = setpid.Kd
+		jsonBytes, err := json.Marshal(setpidParams)
+		if err != nil {
+			fmt.Println("error:", err)
+		} else {
+			go sendCommand(jsonBytes, "setpid")
+		}
+	}
 }
 
 func setpoint(rw http.ResponseWriter, req *http.Request) {
@@ -410,6 +388,7 @@ func main() {
 	go listenForGestureCommands(ipPortStr)
 
 	http.HandleFunc("/gesture", gesture)
+	http.HandleFunc("/setpid", setpid)
 	http.HandleFunc("/setpoint", setpoint)
 	http.HandleFunc("/smooth", smooth)
 	http.HandleFunc("/sleep", sleep)

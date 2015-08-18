@@ -823,7 +823,7 @@
 
 	// Newly implemented smoothing command, passing in time to get to setpoint and setpoint array
 	// sendSmoothCommand("addr", time, [duration, setpoint])
-	function sendSmoothCommand(address, time, setPoint) {
+    function sendSmoothCommand(address, time, setPoint) {
         $.ajax
         ({
             type: "POST",
@@ -839,8 +839,8 @@
 	
 	// Sleep function to reset one actuator
 	// sendSleepCommand(["addr"]) <-- note the square brackets
-	// can pass in "headx", "heady", "ribs", "spine", "purr", or "all"
-	function sendSleepCommand(address) {
+	// can pass in "headx", "heady", "ribs", "spine", or "purr"
+    function sendSleepCommand(address) {
         $.ajax
         ({
             type: "POST",
@@ -850,6 +850,22 @@
             data: JSON.stringify({"addr" : address}),
             success: function () {
                 console.log('successfully sent sleep command, data: ' + data);
+            }
+        })
+    };
+
+	// SetPID function for custom motor PID coefficients
+	// sendSetPIDCommand("addr", kp, ki, kd)
+    function sendSetPIDCommand(address, kp, ki, kd) {
+        $.ajax
+        ({
+            type: "POST",
+            url: location.href + 'setpid',
+            dataType: 'json',
+            async: true,
+            data: JSON.stringify({"addr" : address, "kp" : kp, "ki": ki, "kd": kd}),
+            success: function () {
+                console.log('successfully sent setpid command, data: ' + data);
             }
         })
     };
