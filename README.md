@@ -2,11 +2,11 @@
 
 Adapted from [JeffBehaviour Editor](https://github.com/lauracang/JeffBehaviourEditor-master)
 
-This updated version includes various command line functions written in Javascript the facilitate smooth actuator motion, as well as applied, complex head motions. It does not improve the UI of the behaviour editor.
+This updated version includes various command line functions written in Javascript to facilitate smooth actuator motion, as well as applied, complex head motions. It does not improve the UI of the behaviour editor.
 
 ## Setup
 
-The following set of instructions applies for Windows 7, and may or may not be applicable to other operating systems
+The following set of instructions applies for Windows 7, and may or may not be applicable for other operating systems
 
 Step 1: Install [go](https://golang.org/doc/install) and [git](https://git-scm.com/downloads)
 
@@ -28,12 +28,12 @@ Step 5: Right click on a blank space on the page and click `Inspect element`. Sw
 
 ### Visual
 
-Basic GUI features can be tested out via trial and error. It should be noted however, that setting the loop to 65535 leads to the action be done an infinite amount of times. This can be stopped through a command line sleep instruction for the particular actuator, demonstrated as follows:
+Basic GUI features can be tested out via trial and error. It should be noted however, that setting the loop to 65535 leads to the action to be done an infinite amount of times. This can be stopped through a console command sleep instruction for the particular actuator, demonstrated as follows:
 ```javascript
 sendSleepCommand(["headx"]); // sleep left-right head direction
 ```
 
-### Command Line
+### Command Line / Console
 
 There are a variety of command line functions that are not presented in the GUI. These commands can be run, and used either as baseline functions in further development or altered and referenced.
 
